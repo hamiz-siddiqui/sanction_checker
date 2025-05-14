@@ -16,7 +16,7 @@ WORKDIR /app
 COPY backend/ /app
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Expose port
 EXPOSE 8000
