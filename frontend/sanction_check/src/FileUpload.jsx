@@ -110,8 +110,7 @@ const FileUpload = () => {
                     const errorData = await response.json();
                     errorMsg = errorData.message || errorData.detail || JSON.stringify(errorData);
                 } catch (e) {
-                    const textError = await response.text();
-                    if (textError) errorMsg = textError;
+                    throw new Error(text || `Server error: ${response.status}`);
                 }
                 throw new Error(errorMsg);
             }
@@ -149,8 +148,7 @@ const FileUpload = () => {
                     const errorData = await response.json();
                     errorMsg = errorData.message || errorData.detail || JSON.stringify(errorData);
                 } catch (e) {
-                    const textError = await response.text();
-                    if (textError) errorMsg = textError;
+                    throw new Error(text || `Server error: ${response.status}`);
                 }
                 throw new Error(errorMsg);
             }
