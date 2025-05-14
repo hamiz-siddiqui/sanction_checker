@@ -4,7 +4,7 @@ import warnings
 import re
 warnings.filterwarnings("ignore")
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Update this path if necessary
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'  # Update this path if necessary
 
 # Path to passport image (ensure it's clear and properly aligned)
 
