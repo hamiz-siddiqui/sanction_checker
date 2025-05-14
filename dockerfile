@@ -1,5 +1,5 @@
 # Use an official minimal Python image
-FROM python:3.11-slim
+FROM python:3.11.9
 
 # Install OS-level dependencies (Tesseract and friends)
 RUN apt-get update && \
