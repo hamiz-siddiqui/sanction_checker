@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import Webcam from 'react-webcam';
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'https://sanction-checker.onrender.com'
 console.log("API_URL:", API_URL);
 
 const FileUpload = () => {
