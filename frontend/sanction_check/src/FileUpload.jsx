@@ -3,6 +3,8 @@ import React, { useState, useRef } from 'react';
 import Webcam from 'react-webcam';
 import './App.css'
 
+const API_URL = import.meta.env.VITE_API_URL
+
 const FileUpload = () => {
     const [file, setFile] = useState(null);
     const [imageSrc, setImageSrc] = useState(null);
@@ -80,7 +82,7 @@ const FileUpload = () => {
         let requestOptions = {};
 
         if (file) {
-            endpoint = '/api/route/check-passport-file/';
+            endpoint = `${API_URL}/check-passport-file/`;
             const formData = new FormData();
             formData.append('file', file);
             requestOptions = {
@@ -89,7 +91,7 @@ const FileUpload = () => {
                 // 'Content-Type' header is set automatically by the browser for FormData
             };
         } else if (imageSrc) {
-            endpoint = '/api/route/check-passport-base64/';
+            endpoint = `${API_URL}/check-passport-base64/`;
             // react-webcam getScreenshot returns a data URI (e.g., data:image/jpeg;base64,....)
             // We need to send only the base64 part.
             const base64Data = imageSrc.split(',')[1];
@@ -135,7 +137,7 @@ const FileUpload = () => {
         setResult(null);
 
         try {
-            const response = await fetch('/api/route/check-name/', {
+            const response = await fetch(`${API_URL}/check-name/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
