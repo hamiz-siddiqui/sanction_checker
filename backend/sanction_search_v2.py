@@ -25,6 +25,7 @@ class SanctionedPerson:
     nationality: Optional[str]
     passport_no: Optional[str]
     national_id: Optional[str]
+    source: str  # Source of the sanction (UAE, SDN, or UN)
 
 # --- Helper Functions ---
 def clean_text(text: str) -> str:
@@ -265,7 +266,7 @@ def parse_sdn_entry(text: str) -> Optional[SanctionedPerson]:
         return SanctionedPerson(
             id=None, name=name, original_name=None, title=None, designation=[],
             dob=None, aliases={'good_quality': [a for a in aliases_found if a], 'low_quality': []},
-            nationality=None, passport_no=None, national_id=None
+            nationality=None, passport_no=None, national_id=None, source="SDN"
         )
     except Exception as e:
         # print(f"Error parsing SDN entry: {e} for text: {text[:100]}...")
@@ -306,7 +307,7 @@ def uae_list(pdf_path='Copy of SL_1 (24052021) V.2 (1).pdf') -> List[SanctionedP
                     sanctioned_persons.append(SanctionedPerson(
                         id=None, name=str(name_val).strip(), original_name=None, title=None, designation=[],
                         dob=None, aliases={'good_quality': [], 'low_quality': []},
-                        nationality=None, passport_no=None, national_id=None
+                        nationality=None, passport_no=None, national_id=None, source="UAE"
                     ))
         else:
             print(f"Warning: Column 12 (for names) not found or out of bounds in UAE PDF table data from '{pdf_path}'.")
@@ -361,7 +362,8 @@ def parse_sanction_entry(text: str) -> Optional[SanctionedPerson]:
             aliases={'good_quality': good_aliases, 'low_quality': low_aliases},
             nationality=nationality_match.group(1).strip() if nationality_match and nationality_match.group(1).strip() else None,
             passport_no=passport_match.group(1).strip() if passport_match and passport_match.group(1).strip() else None,
-            national_id=national_id_match.group(1).strip() if national_id_match and national_id_match.group(1).strip() else None
+            national_id=national_id_match.group(1).strip() if national_id_match and national_id_match.group(1).strip() else None,
+            source="UN"
         )
     except Exception as e:
         # print(f"Error parsing UN-style entry: {e} for text: {text[:100]}...")
@@ -440,7 +442,7 @@ if __name__ == "__main__":
     UAE_PDF_PATH = "Copy of SL_1 (24052021) V.2 (1).pdf" # Original filename
     
     PICKLE_FILE = 'sanctioned_people_simplified.pkl' # Changed name to reflect simplification
-    REPROCESS_DATA = False  # Set to True to re-parse PDFs, False to load from pickle
+    REPROCESS_DATA = True  # Set to True to re-parse PDFs, False to load from pickle
 
     all_sanctioned_persons = []
 
@@ -477,6 +479,7 @@ if __name__ == "__main__":
                 print(f"Search result for '{search_query}':")
                 print(f"  Name: {found_person.name}")
                 print(f"  ID: {found_person.id}")
+                print(f"  Source: {found_person.source}")
                 print(f"  Aliases: {found_person.aliases.get('good_quality', [])}")
             else:
                 print(f"No results found for '{search_query}'.")
