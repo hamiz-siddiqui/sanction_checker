@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from fastapi.responses import JSONResponse
-from sanction_search_v2 import sdnlist, uae_list, unsanctionslist
+from sanction_search_v2 import sdnlist, uae_list, unsanctionslist, SanctionedPerson
 import numpy as np
 import cv2
 from datetime import datetime
@@ -12,27 +12,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 from typing import Optional, Dict, Any, List, Tuple
 import pickle
 from pydantic import BaseModel
-from dataclasses import dataclass
 from tqdm import tqdm
 from passporteye import read_mrz
 import base64
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-
-# Sanctioned Person Dataclass
-@dataclass
-class SanctionedPerson:
-    id: Optional[str] # Made Optional as sometimes it's None
-    name: str
-    original_name: Optional[str]
-    title: Optional[str]
-    designation: List[str]
-    dob: Optional[str]
-    aliases: Dict[str, List[str]]
-    nationality: Optional[str]
-    passport_no: Optional[str]
-    national_id: Optional[str]
-
 
 # Global variable to store sanctioned persons
 SANCTIONED_PERSONS = []
@@ -196,23 +180,6 @@ def initialize_data(force_reprocess: bool = False):
         print("Loading existing sanctions data...")
         load_sanctioned_data()
 
-if __name__ == "__main__":
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Sanctions Check API')
-    parser.add_argument('--reprocess', action='store_true',
-                      help='Force reprocessing of sanctions data on startup')
-    args = parser.parse_args()
-
-    # Initialize data based on command line argument
-    initialize_data(args.reprocess)
-
-    # Start the API server
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-else:
-    # When imported as a module (e.g., by uvicorn), just load the data
-    initialize_data(False)
-
 class Base64Request(BaseModel):
     image_data: str  # Base64 encoded image string
 
@@ -303,8 +270,7 @@ async def check_passport_file(file: UploadFile = File(...)):
             response.match_details = {
                 "name": match.name,
                 "aliases": match.aliases.get('good_quality', []),
-                "nationality": match.nationality,
-                "dob": match.dob
+                "source": match.source
             }
         
         return response
@@ -338,8 +304,7 @@ async def check_name(request: NameCheckRequest):
             response.match_details = {
                 "name": match.name,
                 "aliases": match.aliases.get('good_quality', []),
-                "nationality": match.nationality,
-                "dob": match.dob
+                "source": match.source
             }
         
         return response
@@ -377,3 +342,20 @@ async def get_sanctions_status():
             "status": "error",
             "message": str(e)
         }
+    
+if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Sanctions Check API')
+    parser.add_argument('--reprocess', action='store_true',
+                      help='Force reprocessing of sanctions data on startup')
+    args = parser.parse_args()
+
+    # Initialize data based on command line argument
+    initialize_data(args.reprocess)
+
+    # Start the API server
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+else:
+    # When imported as a module (e.g., by uvicorn), just load the data
+    initialize_data(False)
