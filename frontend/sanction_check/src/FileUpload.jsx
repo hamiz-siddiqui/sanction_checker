@@ -299,6 +299,7 @@ const FileUpload = () => {
     boxShadow: "inset 2px 2px 6px #d1d9e6, inset -2px -2px 6px #fff",
     fontFamily: "'Montserrat', sans-serif",
     transition: "box-shadow 0.2s",
+    color: "#2d3748"
   };
   const inputFocusStyle = {
     boxShadow: "inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #fff",
