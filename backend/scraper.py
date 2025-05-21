@@ -6,6 +6,7 @@ import time
 import pandas as pd
 import os
 from datetime import datetime
+from fake_useragent import UserAgent
 
 def ensure_screenshot_dir(person_name):
     # Create base screenshots directory if it doesn't exist
@@ -58,6 +59,9 @@ def check_suspicious_content(title, description):
 
 def google_search_links(query, max_results=20, headless=True, person_name=None):
     options = Options()
+
+    # ua = UserAgent(browsers=["Google", "Chrome"], os="Windows", min_version=133.0, platforms="desktop")
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     if headless:
         options.add_argument("--headless=new")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -67,6 +71,10 @@ def google_search_links(query, max_results=20, headless=True, person_name=None):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument(f"user-agent={ua}")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
 
     driver = webdriver.Chrome(options=options)
 
@@ -102,7 +110,7 @@ def google_search_links(query, max_results=20, headless=True, person_name=None):
         results = driver.find_elements(By.CLASS_NAME, "MjjYud")
         for result in results:
             try:
-                title = result.find_element(By.TAG_NAME, "h3").text
+                title = result.find_element(By.TAG_NAME, "a").text
                 link = result.find_element(By.TAG_NAME, "a").get_attribute("href")
                 description = result.find_element(By.CLASS_NAME, "VwiC3b").text
 
@@ -147,5 +155,5 @@ def find_suspicious_links(person_name):
 
 # Example usage
 if __name__ == "__main__":
-    person = "Muhammad Taher Anwari"
+    person = "Mohammad Taher Anwari"
     print(find_suspicious_links(person))

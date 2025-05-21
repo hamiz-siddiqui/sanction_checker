@@ -10,8 +10,7 @@ fontLink.href =
 fontLink.rel = "stylesheet";
 document.head.appendChild(fontLink);
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://sanction-checker.onrender.com";
+const API_URL = "http://localhost:8000" || "https://sanction-checker.onrender.com";
 console.log("API_URL:", API_URL);
 
 const FileUpload = () => {
@@ -411,12 +410,22 @@ const FileUpload = () => {
   const linksListStyle = {
     marginTop: 8,
     padding: 8,
-    background: "#fff",
+    background: '#fff',
     borderRadius: 6,
-    border: "1px solid #ffa39e",
-    fontSize: "13px",
-    color: "#434343",
+    border: '1px solid #ffa39e',
+    fontSize: '13px',
+    color: '#434343',
+    wordBreak: 'break-all',  // Add this to handle long URLs
+    maxWidth: '100%',        // Add this to ensure container respects parent width
   };
+
+  // Add this new style for the link items
+  const linkItemStyle = {
+    marginBottom: 8,
+    lineHeight: '1.4',
+    paddingRight: 8,
+  };
+
   // --- END STYLES ---
 
   return (
@@ -884,7 +893,7 @@ const FileUpload = () => {
                           <div style={linksListStyle}>
                             <ul style={{ margin: 0, paddingLeft: 20 }}>
                               {result.match_details.links.map((link, index) => (
-                                <li key={index} style={{ marginBottom: 4 }}>
+                                <li key={index} style={linkItemStyle}>
                                   <a
                                     href={link}
                                     target="_blank"
