@@ -17,6 +17,7 @@ from passporteye import read_mrz
 import base64
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from scraper import find_suspicious_links
 
 # Global variable to store sanctioned persons
 SANCTIONED_PERSONS = []
@@ -266,12 +267,22 @@ async def check_passport_file(file: UploadFile = File(...)):
             match_found=bool(match)
         )
         
+        links = find_suspicious_links(full_name)
         if match:
-            response.match_details = {
+            if links:
+                response.match_details = {
+                    "name": match.name,
+                    "aliases": match.aliases.get('good_quality', []),
+                    "source": match.source,
+                    "links": links
+                }
+            else:
+                response.match_details = {
                 "name": match.name,
                 "aliases": match.aliases.get('good_quality', []),
-                "source": match.source
-            }
+                "source": match.source,
+                "links": None
+                }
         
         return response
         
@@ -300,12 +311,22 @@ async def check_name(request: NameCheckRequest):
             match_found=bool(match)
         )
         
+        links = find_suspicious_links(request.full_name)
         if match:
-            response.match_details = {
+            if links:
+                response.match_details = {
+                    "name": match.name,
+                    "aliases": match.aliases.get('good_quality', []),
+                    "source": match.source,
+                    "links": links
+                }
+            else:
+                response.match_details = {
                 "name": match.name,
                 "aliases": match.aliases.get('good_quality', []),
-                "source": match.source
-            }
+                "source": match.source,
+                "links": None
+                }
         
         return response
         

@@ -22,6 +22,7 @@ const FileUpload = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showWebcam, setShowWebcam] = useState(false);
+  const [showLinks, setShowLinks] = useState(false);
 
   const webcamRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -299,7 +300,7 @@ const FileUpload = () => {
     boxShadow: "inset 2px 2px 6px #d1d9e6, inset -2px -2px 6px #fff",
     fontFamily: "'Montserrat', sans-serif",
     transition: "box-shadow 0.2s",
-    color: "#2d3748"
+    color: "#2d3748",
   };
   const inputFocusStyle = {
     boxShadow: "inset 4px 4px 8px #d1d9e6, inset -4px -4px 8px #fff",
@@ -387,6 +388,34 @@ const FileUpload = () => {
   };
   const chooseFileButtonHover = {
     background: "linear-gradient(90deg, #1769aa 0%, #1769aa 100%)",
+  };
+
+  const linkBoxStyle = {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    background: "#fff5f5",
+    border: "1.5px solid #ff4d4f",
+    color: "#cf1322",
+  };
+
+  const linkButtonStyle = {
+    ...buttonStyle,
+    marginTop: 10,
+    background: "linear-gradient(90deg, #ff4d4f 0%, #cf1322 100%)",
+    padding: "8px 16px",
+    fontSize: "14px",
+    height: "auto",
+  };
+
+  const linksListStyle = {
+    marginTop: 8,
+    padding: 8,
+    background: "#fff",
+    borderRadius: 6,
+    border: "1px solid #ffa39e",
+    fontSize: "13px",
+    color: "#434343",
   };
   // --- END STYLES ---
 
@@ -811,8 +840,11 @@ const FileUpload = () => {
                         boxShadow: "0 1px 4px #d1d9e6",
                       }}
                     >
-                      {Object.entries(result.match_details).map(
-                        ([key, value]) => (
+                      {Object.entries(result.match_details).map(([key, value]) => {
+                        // Skip rendering the links field here
+                        if (key === "links") return null;
+
+                        return (
                           <p
                             key={key}
                             style={{
@@ -830,11 +862,44 @@ const FileUpload = () => {
                             >
                               {key.replace(/_/g, " ")}:{" "}
                             </span>
-                            {String(value)}
+                            {Array.isArray(value) ? value.join(", ") : String(value)}
                           </p>
-                        )
-                      )}
+                        );
+                      })}
                     </div>
+
+                    {/* Links Display Section */}
+                    {result.match_details?.links && (
+                      <div style={linkBoxStyle}>
+                        <p style={{ margin: 0, fontWeight: 600 }}>
+                          The name was flagged for suspicious activities
+                        </p>
+                        <button
+                          onClick={() => setShowLinks(!showLinks)}
+                          style={linkButtonStyle}
+                        >
+                          {showLinks ? "Hide Details" : "Show Details"}
+                        </button>
+                        {showLinks && (
+                          <div style={linksListStyle}>
+                            <ul style={{ margin: 0, paddingLeft: 20 }}>
+                              {result.match_details.links.map((link, index) => (
+                                <li key={index} style={{ marginBottom: 4 }}>
+                                  <a
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: "#1890ff" }}
+                                  >
+                                    {link}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {result.match_found === false && (
