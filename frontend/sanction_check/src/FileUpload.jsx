@@ -10,7 +10,7 @@ fontLink.href =
 fontLink.rel = "stylesheet";
 document.head.appendChild(fontLink);
 
-const API_URL = "http://localhost:8000" || "https://sanction-checker.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://sanction-checker.onrender.com";
 console.log("API_URL:", API_URL);
 
 const FileUpload = () => {
