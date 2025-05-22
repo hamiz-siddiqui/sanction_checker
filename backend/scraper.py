@@ -98,7 +98,9 @@ def google_search_links(query, max_results=20, headless=True, person_name=None):
     descriptions = []
     flags = []  # List to store suspicious content flags
     page = 0
-
+    driver.get("https://www.example.com/")
+    time.sleep(2)
+    return driver.find_element(By.TAG_NAME, "h1").text
     while len(links) < max_results and page < 5:
         url = f"https://www.google.com/search?q={query}&start={page * 10}"
         driver.get(url)
@@ -137,15 +139,16 @@ def find_suspicious_links(person_name):
     query = f'"{person_name}"'
 
     # Perform the search and get the results
-    links, titles, descriptions, flags = google_search_links(query, person_name=person_name)
+    # links, titles, descriptions, flags = google_search_links(query, person_name=person_name)
 
+    return google_search_links(query, person_name=person_name)
     # Create a DataFrame to store the results
-    df = pd.DataFrame({
-        'Links': links,
-        'Titles': titles,
-        'Descriptions': descriptions,
-        'Suspicious': flags
-    })
+    # df = pd.DataFrame({
+    #     'Links': links,
+    #     'Titles': titles,
+    #     'Descriptions': descriptions,
+    #     'Suspicious': flags
+    # })
     # Save the DataFrame to a CSV file
     # df.to_csv(f'{person_name}.csv', index=False)
     
