@@ -13,11 +13,13 @@ from typing import Optional, Dict, Any, List, Tuple
 import pickle
 from pydantic import BaseModel
 from tqdm import tqdm
-from passporteye import read_mrz
+from fastmrz import FastMRZ
 import base64
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from scraper import find_suspicious_links
+# Initialize FastMRZ for reading MRZ from passport images
+fast_mrz = FastMRZ(tesseract_path='/usr/bin/tesseract')  # Update this path if necessary
 
 # Global variable to store sanctioned persons
 SANCTIONED_PERSONS = []
@@ -65,19 +67,15 @@ def read_passport_image(image) -> Optional[Tuple[str, str]]:
             image_path = image
 
         # Read the MRZ from the image
-        mrz = read_mrz(image_path)
+        mrz = fast_mrz.get_details(image_path)
         
         # Clean up temporary file if it was created
         if isinstance(image, np.ndarray) and os.path.exists('temp_passport.jpg'):
             os.remove('temp_passport.jpg')
 
-        if mrz is not None:
-            mrz_data = mrz.to_dict()
-            # Clean up the names
-            names = mrz_data['names']
-            names = re.split(r'\s+K', names)[0]  # Remove any K suffix
-            names = names.strip()
-            surname = mrz_data['surname'].strip()
+        if mrz["status"] == "SUCCESS":
+            names = mrz['given_name']
+            surname = mrz['surname']
             return (names, surname)
         else:
             print("MRZ not detected.")
