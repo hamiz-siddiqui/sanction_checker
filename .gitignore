@@ -1,6 +1,7 @@
 **/node_modules/
 **/__pycache__/
 **/venv_web/
+**/screenshots/
 *.pyc
 .env
 dist/

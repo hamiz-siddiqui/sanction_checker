@@ -47,6 +47,9 @@ WORKDIR /app
 # Copy backend code
 COPY backend/ /app
 
+# Copy traindata file
+COPY mrz.traineddata /usr/share/tesseract-ocr/tessdata
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

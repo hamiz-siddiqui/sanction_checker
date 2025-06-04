@@ -57,11 +57,18 @@ def check_suspicious_content(title, description):
     # Check if any of the suspicious keywords are in the text
     return any(keyword in text for keyword in suspicious_keywords)
 
+def get_desktop_user_agent():
+    ua = UserAgent()
+    while True:
+        agent = ua.random
+        if "Mobile" not in agent and "Android" not in agent and "iPhone" not in agent and "Tablet" not in agent:
+            return agent
+
 def google_search_links(query, max_results=20, headless=True, person_name=None):
     options = Options()
 
     # ua = UserAgent(browsers=["Google", "Chrome"], os="Windows", min_version=133.0, platforms="desktop")
-    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+    ua = get_desktop_user_agent()
     if headless:
         options.add_argument("--headless=new")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -98,9 +105,7 @@ def google_search_links(query, max_results=20, headless=True, person_name=None):
     descriptions = []
     flags = []  # List to store suspicious content flags
     page = 0
-    driver.get("https://www.example.com/")
-    time.sleep(2)
-    return driver.find_element(By.TAG_NAME, "h1").text
+    
     while len(links) < max_results and page < 5:
         url = f"https://www.google.com/search?q={query}&start={page * 10}"
         driver.get(url)
@@ -139,16 +144,15 @@ def find_suspicious_links(person_name):
     query = f'"{person_name}"'
 
     # Perform the search and get the results
-    # links, titles, descriptions, flags = google_search_links(query, person_name=person_name)
+    links, titles, descriptions, flags = google_search_links(query, person_name=person_name)
 
-    return google_search_links(query, person_name=person_name)
     # Create a DataFrame to store the results
-    # df = pd.DataFrame({
-    #     'Links': links,
-    #     'Titles': titles,
-    #     'Descriptions': descriptions,
-    #     'Suspicious': flags
-    # })
+    df = pd.DataFrame({
+        'Links': links,
+        'Titles': titles,
+        'Descriptions': descriptions,
+        'Suspicious': flags
+    })
     # Save the DataFrame to a CSV file
     # df.to_csv(f'{person_name}.csv', index=False)
     
