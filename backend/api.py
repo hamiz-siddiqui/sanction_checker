@@ -19,7 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from scraper import find_suspicious_links
 # Initialize FastMRZ for reading MRZ from passport images
-fast_mrz = FastMRZ(tesseract_path='/usr/bin/tesseract')  # Update this path if necessary
+# fast_mrz = FastMRZ(tesseract_path='/usr/bin/tesseract')  # Update this path if necessary
+fast_mrz = FastMRZ()  # Use default tesseract path if installed in PATH
 
 # Global variable to store sanctioned persons
 SANCTIONED_PERSONS = []
@@ -265,7 +266,8 @@ async def check_passport_file(file: UploadFile = File(...)):
             match_found=bool(match)
         )
         
-        links = find_suspicious_links(full_name)
+        # links = find_suspicious_links(full_name)
+        links = None
         if match:
             if links:
                 response.match_details = {
