@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from os import path
 from sanction_search_v2 import sdnlist, uae_list, unsanctionslist, SanctionedPerson
 import numpy as np
 import cv2
@@ -16,6 +18,13 @@ from tqdm import tqdm
 from fastmrz import FastMRZ
 import base64
 from fastapi.middleware.cors import CORSMiddleware
+import img2pdf
+from PIL import Image
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
+from reportlab.lib import colors
+
 from contextlib import asynccontextmanager
 from scraper import find_suspicious_links
 # Initialize FastMRZ for reading MRZ from passport images
@@ -27,6 +36,10 @@ SANCTIONED_PERSONS = []
 
 # Path to pickle file
 PICKLE_FILE = 'sanctioned_people_simplified.pkl'
+
+# Set up reports directory
+REPORTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,6 +66,22 @@ class SanctionsCheckResponse(BaseModel):
     message: str
     match_found: bool
     match_details: Optional[Dict[str, Any]] = None
+    report_url: Optional[str] = None
+
+@app.get("/download-report/{filename}")
+async def download_report(filename: str):
+    """Download a generated PDF report"""
+    file_path = os.path.join(REPORTS_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(
+            file_path,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            media_type="application/pdf"
+        )
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Report not found"}
+    )
 
 def read_passport_image(image) -> Optional[Tuple[str, str]]:
     """
@@ -69,14 +98,23 @@ def read_passport_image(image) -> Optional[Tuple[str, str]]:
 
         # Read the MRZ from the image
         mrz = fast_mrz.get_details(image_path)
-        
-        # Clean up temporary file if it was created
-        if isinstance(image, np.ndarray) and os.path.exists('temp_passport.jpg'):
-            os.remove('temp_passport.jpg')
 
         if mrz["status"] == "SUCCESS":
             names = mrz['given_name']
             surname = mrz['surname']
+
+            # Create PDF for passport image
+            pdf_path = f"{names} {surname} - Passport.pdf" 
+            image = Image(image_path)
+            pdf_bytes = img2pdf.convert(image.filename)
+            file = open(pdf_path, "wb")
+            file.write(pdf_bytes)
+            image.close()
+            file.close()
+
+            # Clean up temporary image file
+            os.remove(image_path)
+
             return (names, surname)
         else:
             print("MRZ not detected.")
@@ -98,7 +136,13 @@ def check_sanctions(name: str, sanctioned_persons) -> Optional[dict]:
     """
     Check if a name appears in the sanctions list
     Returns the sanctioned person's details if found, None otherwise
+    Creates the report related to the person, regardless of sanction status
     """
+
+    # Variable just to indicate if a match was found, for reporting purposes
+    found = False
+    match = None
+
     if not name or not sanctioned_persons:
         return None
         
@@ -106,15 +150,20 @@ def check_sanctions(name: str, sanctioned_persons) -> Optional[dict]:
     for person in sanctioned_persons:
         # Check main name
         if person.name and name in person.name.lower():
-            return person
+            found = True
+            match = person
+            break
             
         # Check aliases
         for alias_type in ['good_quality', 'low_quality']:
             for alias in person.aliases.get(alias_type, []):
                 if alias and name in alias.lower():
-                    return person
-    return None
-
+                    match = person
+                    found = True
+                    break
+        if found:
+            break
+    return match
 
 def reprocess_sanctions_data():
     """Reprocess sanctions data from PDFs and update pickle file"""
@@ -163,6 +212,69 @@ def load_sanctioned_data():
     except Exception as e:
         print(f"Error loading sanctions data: {e}")
         SANCTIONED_PERSONS = []
+
+def create_pdf(response: SanctionsCheckResponse, full_name: str):
+    """
+    Create a PDF report for the sanctions check response
+    """
+    # Create filename in format: {full name - Screening Result (MonthYear)}
+    current_date = datetime.now()
+    filename = f"{full_name} - Screening Result ({current_date.strftime('%B%Y')}).pdf"
+    pdf_path = os.path.join(REPORTS_DIR, filename)
+    
+    pdf = canvas.Canvas(pdf_path)
+    pdf.setTitle("Compliance Check Result")
+
+    # Register and set font
+    pdf.setFont('Helvetica', 14)
+    
+    # Title
+    pdf.setFillColor(colors.black)
+    pdf.drawString(100, 750, "Compliance Check Result")
+    
+    # Add current date
+    pdf.setFont('Helvetica', 10)
+    pdf.drawString(100, 720, f"Date: {current_date.strftime('%d %B %Y')}")
+    
+    # Add checked name
+    pdf.drawString(100, 690, f"Name Checked: {full_name}")
+    
+    # Response details
+    y = 660
+    if not response.match_found:
+        pdf.drawString(100, y, "Result: No match found in sanctions lists")
+    else:
+        pdf.drawString(100, y, "Result: MATCH FOUND IN SANCTIONS LIST")
+        y -= 30
+
+        if response.match_details:
+            pdf.drawString(100, y, "Match Details:")
+            y -= 20
+            
+            # Add name
+            if "name" in response.match_details:
+                pdf.drawString(120, y, f"Listed Name: {response.match_details['name']}")
+                y -= 20
+            
+            # Add aliases if any
+            if "aliases" in response.match_details and response.match_details["aliases"]:
+                pdf.drawString(120, y, "Known Aliases:")
+                y -= 20
+                for alias in response.match_details["aliases"]:
+                    pdf.drawString(140, y, f"- {alias}")
+                    y -= 20
+            
+            # Add source
+            if "source" in response.match_details:
+                pdf.drawString(120, y, f"List Source: {response.match_details['source']}")
+                y -= 20
+
+    # Add footer
+    pdf.setFont('Helvetica', 8)
+    pdf.drawString(100, 50, "This report is system-generated and is strictly confidential.")
+      # Save PDF
+    pdf.save()
+    return filename  # Return just the filename, not the full path
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
@@ -216,22 +328,37 @@ async def check_passport_base64(request: Base64Request):
             match_found=bool(match)
         )
         
+        links = find_suspicious_links(full_name)
         if match:
-            response.match_details = {
+            if links:
+                response.match_details = {
+                    "name": match.name,
+                    "aliases": match.aliases.get('good_quality', []),
+                    "source": match.source,
+                    "links": links
+                }
+            else:
+                response.match_details = {
                 "name": match.name,
                 "aliases": match.aliases.get('good_quality', []),
-                "nationality": match.nationality,
-                "dob": match.dob
-            }
-        
+                "source": match.source,
+                "links": None
+                }
+
+        # Create report for screening check results
+        create_pdf(response, full_name)
+
         return response
         
     except Exception as e:
-        return SanctionsCheckResponse(
+        response = SanctionsCheckResponse(
             success=False,
             message=f"Error processing passport: {str(e)}",
             match_found=False
         )
+
+        create_pdf(response, "Unknown")
+        return response
 
 @app.post("/check-passport-file/", response_model=SanctionsCheckResponse)
 async def check_passport_file(file: UploadFile = File(...)):
@@ -266,8 +393,7 @@ async def check_passport_file(file: UploadFile = File(...)):
             match_found=bool(match)
         )
         
-        # links = find_suspicious_links(full_name)
-        links = None
+        links = find_suspicious_links(full_name)
         if match:
             if links:
                 response.match_details = {
@@ -284,9 +410,13 @@ async def check_passport_file(file: UploadFile = File(...)):
                 "links": None
                 }
         
+        # Create report for screening check results
+        create_pdf(response, full_name)
+        
         return response
         
     except Exception as e:
+        
         return SanctionsCheckResponse(
             success=False,
             message=f"Error processing passport: {str(e)}",
@@ -326,16 +456,23 @@ async def check_name(request: NameCheckRequest):
                 "aliases": match.aliases.get('good_quality', []),
                 "source": match.source,
                 "links": None
-                }
+                }        # Create report for screening check results
+        filename = create_pdf(response, request.full_name)
+        response.report_url = f"/download-report/{filename}"
         
         return response
         
     except Exception as e:
-        return SanctionsCheckResponse(
+        # Handle any errors that occur during the check
+        response = SanctionsCheckResponse(
             success=False,
             message=f"Error checking name: {str(e)}",
-            match_found=False
+            match_found=False,
+            match_details={"name": request.full_name}
         )
+        create_pdf(response, request.full_name)
+
+        return response
 
 @app.post("/reprocess-sanctions/")
 async def trigger_reprocess(background_tasks: BackgroundTasks):
@@ -380,3 +517,9 @@ if __name__ == "__main__":
 else:
     # When imported as a module (e.g., by uvicorn), just load the data
     initialize_data(False)
+
+# Mount the static files directory
+if not os.path.exists("static"):
+    os.makedirs("static")
+static_dir = path.join(path.dirname(path.abspath(__file__)), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
